@@ -96,6 +96,9 @@ fi
 # Setup prereqs for server
 # common named prereqs
 PREREQ="curl wget unzip tar"
+PREREQDEB="dnsutils"
+PREREQRPM="bind-utils"
+
 echo "Installing prerequisites"
 # we would not be updating an unsupported OS
 # or better - refactor this and installation together

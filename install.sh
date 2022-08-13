@@ -4,30 +4,6 @@
 uname=$(whoami)
 admintoken=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c16)
 
-# Choice for DNS or IP
-PS3='Choose your preferred option, IP or DNS/Domain:'
-WAN=("IP" "DNS/Domain")
-select WANOPT in "${WAN[@]}"; do
-case $WANOPT in
-"IP")
-wanip=$(dig @resolver4.opendns.com myip.opendns.com +short)
-break
-;;
-
-"DNS/Domain")
-echo -ne "Enter your preferred domain/dns address ${NC}: "
-read wanip
-#check wanip is valid domain
-if ! [[ $wanip =~ ^[a-zA-Z0-9]+([a-zA-Z0-9.-]*[a-zA-Z0-9]+)?$ ]]; then
-    echo -e "${RED}Invalid domain/dns address${NC}"
-    exit 1
-fi
-break
-;;
-*) echo "invalid option $REPLY";;
-esac
-done
-
 # identify OS
 if [ -f /etc/os-release ]; then
     # freedesktop.org and systemd
@@ -119,6 +95,9 @@ fi
 # Setup prereqs for server
 # common named prereqs
 PREREQ="curl wget unzip tar"
+PREREQDEB="dnsutils"
+PREREQRPM="bind-utils"
+
 echo "Installing prerequisites"
 if [ "${ID}" = "debian" ] || [ "$OS" = "Ubuntu" ] || [ "$OS" = "Debian" ]  || [ "${UPSTREAM_ID}" = "ubuntu" ] || [ "${UPSTREAM_ID}" = "debian" ]; then
     PREREQ+=" dnsutils"
@@ -135,7 +114,29 @@ fi
  ${PKG_UPDATE}
  ${PKG_INSTALL} ${PREREQ}
  # git
+# Choice for DNS or IP
+PS3='Choose your preferred option, IP or DNS/Domain:'
+WAN=("IP" "DNS/Domain")
+select WANOPT in "${WAN[@]}"; do
+case $WANOPT in
+"IP")
+wanip=$(dig @resolver4.opendns.com myip.opendns.com +short)
+break
+;;
 
+"DNS/Domain")
+echo -ne "Enter your preferred domain/dns address ${NC}: "
+read wanip
+#check wanip is valid domain
+if ! [[ $wanip =~ ^[a-zA-Z0-9]+([a-zA-Z0-9.-]*[a-zA-Z0-9]+)?$ ]]; then
+    echo -e "${RED}Invalid domain/dns address${NC}"
+    exit 1
+fi
+break
+;;
+*) echo "invalid option $REPLY";;
+esac
+done
 
 # Make Folder /opt/rustdesk/
 if [ ! -d "/opt/rustdesk" ]; then
@@ -218,6 +219,13 @@ key=$(cat "${pubname}")
 
 rm rustdesk-server-linux-x64.zip
 
+# Choice for DNS or IP
+PS3='Please choose if you want to download configs and install HTTP server:'
+EXTRA=("Yes" "No")
+select EXTRAOPT in "${EXTRA[@]}"; do
+case $EXTRAOPT in
+"Yes")
+
 # Create windows install script
 wget https://raw.githubusercontent.com/dinger1986/rustdeskinstall/master/WindowsAgentAIOInstall.ps1
 sudo sed -i "s|wanipreg|${wanip}|g" WindowsAgentAIOInstall.ps1
@@ -294,4 +302,26 @@ exit ;
 else
 echo "waiting for the keypress"
 fi
+done
+break
+;;
+
+"No")
+echo -e "Your IP/DNS Address is ${wanip}"
+echo -e "Your public key is ${key}"
+echo -e "Install Rustdesk on your machines and change your public key and IP/DNS name to the above"
+
+echo "Press any key to finish install"
+while [ true ] ; do
+read -t 3 -n 1
+if [ $? = 0 ] ; then
+exit ;
+else
+echo "waiting for the keypress"
+fi
+done
+break
+;;
+*) echo "invalid option $REPLY";;
+esac
 done
